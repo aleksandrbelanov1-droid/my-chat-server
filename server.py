@@ -1,15 +1,22 @@
 import asyncio
 import json
 import sqlite3
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+import os
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from typing import Dict, List
-from fastapi import HTTPException
 from pydantic import BaseModel
 
 app = FastAPI()
 
-# Инициализация базы данных SQLite без дефолтных комнат
+# Инициализация базы данных SQLite с автоочисткой при старте
 def init_db():
+    # Удаляем старый файл базы, если он существовал, чтобы список был чистым
+    if os.path.exists("messenger.db"):
+        try:
+            os.remove("messenger.db")
+        except Exception:
+            pass
+
     conn = sqlite3.connect("messenger.db")
     cursor = conn.cursor()
     # Таблица пользователей
