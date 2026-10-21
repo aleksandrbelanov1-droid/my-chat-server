@@ -3,10 +3,12 @@ import json
 import sqlite3
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from typing import Dict, List
+from fastapi import HTTPException
+from pydantic import BaseModel
 
 app = FastAPI()
 
-# Инициализация базы данных SQLite
+# Инициализация базы данных SQLite без дефолтных комнат
 def init_db():
     conn = sqlite3.connect("messenger.db")
     cursor = conn.cursor()
@@ -23,11 +25,6 @@ def init_db():
             name TEXT PRIMARY KEY
         )
     """)
-    # Добавим дефолтные комнаты, если их нет
-    cursor.execute("INSERT OR IGNORE INTO rooms (name) VALUES ('General')")
-    cursor.execute("INSERT OR IGNORE INTO rooms (name) VALUES ('Игры')")
-    cursor.execute("INSERT OR IGNORE INTO rooms (name) VALUES ('Флудилка')")
-    
     # Таблица друзей
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS friends (
@@ -86,10 +83,6 @@ async def websocket_endpoint(websocket: WebSocket, room: str):
             await manager.broadcast(room, message_json)
     except WebSocketDisconnect:
         manager.disconnect(websocket, room)
-
-# Дополнительные HTTP-эндопнты для регистрации, комнат и друзей
-from fastapi import HTTPException
-from pydantic import BaseModel
 
 class AuthData(BaseModel):
     username: str
@@ -161,7 +154,6 @@ class FriendData(BaseModel):
 def add_friend(data: FriendData):
     conn = sqlite3.connect("messenger.db")
     cursor = conn.cursor()
-    # Проверим, существует ли такой юзер вообще
     cursor.execute("SELECT * FROM users WHERE username = ?", (data.friend_name,))
     if not cursor.fetchone():
         conn.close()
